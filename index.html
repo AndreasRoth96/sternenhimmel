@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sternenrätsel</title>
+    <style>
+        :root{
+            --bg1:#070b1a; --bg2:#0c1533; --acc:#ffd44d; --muted:#9aa4c2; --good:#22c55e; --bad:#ef4444;
+        }
+        html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial; color:#e8ecff;background:radial-gradient(1200px 600px at 70% 10%, var(--bg2), var(--bg1));}
+        .app{display:grid;grid-template-rows:auto 1fr auto;min-height:100%;}
+        header{display:flex;gap:.75rem;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.06);backdrop-filter: blur(6px);}
+        header h1{font-size:1.05rem;margin:0;font-weight:700;letter-spacing:.2px}
+        header .actions{display:flex;gap:.5rem;align-items:center}
+        button{appearance:none;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;padding:.5rem .75rem;border-radius:.75rem;cursor:pointer;font-weight:600}
+        button:hover{background:rgba(255,255,255,.12)}
+        button.primary{border-color:transparent;background:linear-gradient(180deg,#5b7cff,#2c5aff)}
+        .wrap{display:grid;grid-template-columns:340px 1fr;gap:1rem;min-height:0}
+        @media (max-width: 900px){ .wrap{grid-template-columns:1fr} }
+        .panel{padding:1rem 1.25rem}
+        .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+        .muted{color:var(--muted)}
+
+        /* Star canvas */
+        #skyWrap{position:relative;overflow:hidden}
+        #sky{width:100%;height:100%;display:block}
+        .hint{position:absolute;inset:0;/* enable interactions so clicks/taps work */pointer-events:auto;cursor:crosshair}
+        .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);padding:.6rem .9rem;border-radius:.75rem;font-size:.95rem}
+
+        /* Fortune modal */
+        dialog{border:none;background:rgba(15,22,50,.9);color:#fff;border-radius:1rem;max-width:520px;width:calc(100% - 2rem);padding:1.25rem 1.25rem 1rem;box-shadow:0 20px 60px rgba(0,0,0,.45);}
+        dialog::backdrop{background:rgba(0,0,0,.55)}
+        .modal-header{display:flex;gap:.75rem;align-items:center;margin-bottom:.5rem}
+        .pill{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .5rem;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:.8rem}
+
+        /* Confetti (emoji) */
+        .confetti{position:fixed;top:-20px;font-size:22px;animation:fall 2.2s ease-in forwards}
+        @keyframes fall{to{transform:translateY(105vh) rotate(540deg);opacity:.2}}
+
+        /* Lists */
+        .list{display:flex;flex-direction:column;gap:.5rem;margin:.5rem 0 0}
+        .list li{display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);padding:.5rem .6rem;border-radius:.6rem}
+        .tag{font-size:.8rem;color:#b9c2e6}
+        .small{font-size:.85rem}
+        input[type="text"]{width:100%;padding:.55rem .65rem;border-radius:.6rem;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff}
+        form{display:flex;gap:.5rem;align-items:center;margin-top:.5rem}
+    </style>
+</head>
+<body>
+<div class="app">
+    <header>
+        <h1>⭐ Sternenrätsel</h1>
+        <div class="actions">
+            <button id="newPuzzle" class="primary">Neues Rätsel</button>
+            <button id="toggleHints">Hinweis an/aus</button>
+        </div>
+    </header>
+
+    <div class="wrap">
+        <!-- Sidebar -->
+        <section class="panel card" aria-label="Seitenleiste">
+            <h2 style="margin:.25rem 0 .25rem">Anleitung</h2>
+            <p class="muted small">Finde das Sternbild, indem du die markierten Sterne der Reihe nach antippst. Gib danach den Namen ein (deutsch oder lateinisch). Als Belohnung erhältst du einen zufälligen Glücksspruch. 🥳</p>
+            <hr style="border:none;border-top:1px solid rgba(255,255,255,.08);margin:.75rem 0" />
+
+            <div>
+                <div class="pill" title="Aktives Rätsel"><span>🔭</span><span id="activeName">–</span></div>
+                <form id="answerForm" autocomplete="off">
+                    <input id="answer" type="text" placeholder="Name des Sternbilds …" aria-label="Antwort" />
+                    <button>Prüfen</button>
+                </form>
+            </div>
+
+            <h3 style="margin:1rem 0 .25rem">Gefundene Sternbilder</h3>
+            <ul id="foundList" class="list" aria-live="polite"></ul>
+
+            <h3 style="margin:1rem 0 .25rem">Verfügbare Rätsel</h3>
+            <ul id="availableList" class="list"></ul>
+        </section>
+
+        <!-- Sky -->
+        <section id="skyWrap" class="panel card" aria-label="Sternenhimmel">
+            <canvas id="sky" aria-label="Interaktiver Sternenhimmel"></canvas>
+            <canvas id="overlay" class="hint" aria-hidden="true"></canvas>
+        </section>
+    </div>
+
+    <footer class="panel" style="opacity:.9">
+        <span class="muted small">Tipp: Langer Druck/Klick auf den Himmel erzeugt einen Screenshot (PNG) zum Verschenken.</span>
+    </footer>
+</div>
+
+<dialog id="fortuneModal">
+    <div class="modal-header"><div class="pill"><span>🍀</span> Glückskeks</div></div>
+    <p id="fortuneText" class="small" style="line-height:1.4"></p>
+    <form method="dialog" style="margin-top:.75rem"><button autofocus>Weiter</button></form>
+</dialog>
+
+<script>
+    // --- Data ------------------------------------------------------------
+    const FORTUNES = [
+        "Du unterschätzt, wie stark du bist.",
+        "Heute ist ein guter Tag, eine mutige Entscheidung zu treffen.",
+        "Kleine Schritte – große Wirkung.",
+        "Dein Lächeln verändert Räume.",
+        "Du darfst stolz auf dich sein.",
+        "Ein Kapitel endet, ein besseres beginnt.",
+        "Vertrau auf deinen Kompass, nicht auf den Wind.",
+        "Alles, was du brauchst, trägst du bereits in dir.",
+        "Dein Fleiß macht Türen auf, die andere nicht sehen.",
+        "Du bringst Licht in die Welt – weiter so!",
+    ];
+
+    /**
+     * Konstellationen: stark vereinfachte Muster in normierten Koordinaten [0..1]
+     * Jede hat: id, display (de), aliases ([de/lat Variationen]), points (x,y), edges (Index-Paare)
+     */
+    const CONSTELLATIONS = [
+        {
+            id:"ursa_minor", display:"Kleiner Wagen", aliases:["kleiner wagen","ursa minor","kleine bärin","little dipper","kleiner bär"],
+            points:[[0.12,0.35],[0.22,0.40],[0.35,0.45],[0.55,0.48],[0.70,0.52],[0.80,0.60],[0.90,0.75]],
+            edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]]
+        },
+        {
+            id:"aries", display:"Widder", aliases:["widder","aries"],
+            points:[[0.25,0.70],[0.35,0.68],[0.47,0.62]],
+            edges:[[0,1],[1,2]]
+        },
+        {
+            id:"taurus", display:"Stier", aliases:["stier","taurus"],
+            points:[[0.62,0.28],[0.58,0.36],[0.52,0.42],[0.46,0.47],[0.40,0.50]],
+            edges:[[0,1],[1,2],[2,3],[3,4]]
+        },
+        {
+            id:"gemini", display:"Zwillinge", aliases:["zwillinge","gemini"],
+            points:[[0.20,0.20],[0.26,0.28],[0.33,0.36],[0.40,0.42],[0.28,0.20],[0.35,0.28],[0.42,0.36],[0.49,0.42]],
+            edges:[[0,1],[1,2],[2,3],[4,5],[5,6],[6,7]]
+        },
+        {
+            id:"leo", display:"Löwe", aliases:["löwe","loewe","leo"],
+            points:[[0.70,0.78],[0.65,0.70],[0.60,0.64],[0.56,0.56],[0.50,0.50],[0.44,0.46]],
+            edges:[[0,1],[1,2],[2,3],[3,4],[4,5]]
+        }
+    ];
+
+    // --- Canvas setup ----------------------------------------------------
+    const sky = document.getElementById('sky');
+    const overlay = document.getElementById('overlay');
+    const skyWrap = document.getElementById('skyWrap');
+    const ctx = sky.getContext('2d');
+    const octx = overlay.getContext('2d');
+
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    function resize(){
+        const rect = skyWrap.getBoundingClientRect();
+        [sky, overlay].forEach(cv=>{cv.width = Math.floor(rect.width*DPR); cv.height = Math.floor((rect.height)*DPR); cv.style.width = rect.width+"px"; cv.style.height = rect.height+"px";});
+        drawBackground();
+        drawStars();
+        drawProgress();
+    }
+    window.addEventListener('resize', resize);
+
+    // --- Starfield -------------------------------------------------------
+    let stars = [];
+    function randomStars(n){
+        const arr=[]; const w=sky.width, h=sky.height;
+        for(let i=0;i<n;i++){
+            arr.push({x:Math.random()*w,y:Math.random()*h,r:(Math.random()*1.2+0.4)*DPR,tw:Math.random()*Math.PI*2});
+        }
+        return arr;
+    }
+
+    function drawBackground(){
+        const g = ctx.createLinearGradient(0,0,sky.width,sky.height);
+        g.addColorStop(0,'rgba(20,32,72,.9)');
+        g.addColorStop(1,'rgba(6,10,24,.95)');
+        ctx.fillStyle = g; ctx.fillRect(0,0,sky.width, sky.height);
+    }
+
+    function drawStars(){
+        if(!stars.length) stars = randomStars(220);
+        for(const s of stars){
+            const twinkle = (Math.sin(Date.now()/700 + s.tw)*0.4+0.6);
+            ctx.beginPath(); ctx.arc(s.x,s.y,s.r*twinkle,0,Math.PI*2);
+            ctx.fillStyle = `rgba(255,255,255,${0.6+0.4*Math.random()})`; ctx.fill();
+        }
+    }
+
+    // --- Game state ------------------------------------------------------
+    const activeNameEl = document.getElementById('activeName');
+    const foundList = document.getElementById('foundList');
+    const availableList = document.getElementById('availableList');
+    const answerForm = document.getElementById('answerForm');
+    const answerInput = document.getElementById('answer');
+    const btnNew = document.getElementById('newPuzzle');
+    const btnHints = document.getElementById('toggleHints');
+
+    let showHints = true;
+    let active = null;      // active constellation object
+    let progress = [];      // indices clicked so far
+    let found = new Set(JSON.parse(localStorage.getItem('found-consts')||'[]'));
+
+    function saveFound(){ localStorage.setItem('found-consts', JSON.stringify([...found])); }
+
+    function drawProgress(){
+        octx.clearRect(0,0,overlay.width,overlay.height);
+        if(!active) return;
+
+        const w = overlay.width, h = overlay.height;
+        const pts = active.points.map(([x,y])=>({x:x*w, y:y*h}));
+
+        // edges (hint)
+        if(showHints){
+            octx.strokeStyle = 'rgba(255,255,255,.15)'; octx.lineWidth = 2*DPR; octx.setLineDash([6*DPR,6*DPR]);
+            octx.beginPath();
+            for(const [a,b] of active.edges){
+                octx.moveTo(pts[a].x, pts[a].y); octx.lineTo(pts[b].x, pts[b].y);
+            }
+            octx.stroke(); octx.setLineDash([]);
+        }
+
+        // clicked edges
+        octx.strokeStyle = 'rgba(255,212,77,.95)'; octx.lineWidth = 3*DPR; octx.beginPath();
+        for(let i=0;i<progress.length-1;i++){
+            const a = pts[progress[i]], b = pts[progress[i+1]];
+            octx.moveTo(a.x,a.y); octx.lineTo(b.x,b.y);
+        }
+        octx.stroke();
+
+        // points
+        for(let i=0;i<pts.length;i++){
+            const p = pts[i];
+            const done = progress.includes(i);
+            octx.beginPath(); octx.arc(p.x,p.y,6*DPR,0,Math.PI*2);
+            octx.fillStyle = done ? 'rgba(255,212,77,.95)' : 'rgba(255,255,255,.6)';
+            octx.fill();
+            octx.strokeStyle = 'rgba(0,0,0,.35)'; octx.lineWidth=1*DPR; octx.stroke();
+        }
+    }
+
+    function pickNew(){
+        const pool = CONSTELLATIONS.filter(c=>!found.has(c.id));
+        active = pool.length ? pool[Math.floor(Math.random()*pool.length)] : CONSTELLATIONS[Math.floor(Math.random()*CONSTELLATIONS.length)];
+        progress = [0]; // start at first point to führen
+        activeNameEl.textContent = active.display;
+        drawBackground(); drawStars(); drawProgress();
+        answerInput.value = '';
+    }
+
+    function rebuildLists(){
+        foundList.innerHTML = '';
+        for(const c of CONSTELLATIONS){
+            if(found.has(c.id)){
+                const li = document.createElement('li');
+                li.innerHTML = `<span>✅ ${c.display}</span><span class="tag">gefunden</span>`; foundList.appendChild(li);
+            }
+        }
+
+        availableList.innerHTML = '';
+        for(const c of CONSTELLATIONS){
+            const li = document.createElement('li');
+            const btn = document.createElement('button'); btn.textContent = 'Starten';
+            btn.addEventListener('click',()=>{active=c;progress=[0];activeNameEl.textContent=c.display;drawProgress();});
+            li.innerHTML = `<span>${found.has(c.id)?'⭐':''} ${c.display}</span>`; li.appendChild(btn);
+            availableList.appendChild(li);
+        }
+    }
+
+    function nearPoint(mx,my){
+        const w=overlay.width, h=overlay.height; const pts = active.points.map(([x,y])=>({x:x*w, y:y*h}));
+        const r = 14*DPR;
+        for(let i=0;i<pts.length;i++){
+            const d = Math.hypot(mx-pts[i].x, my-pts[i].y);
+            if(d<=r) return i;
+        }
+        return -1;
+    }
+
+    function handleClick(ev){
+        if(!active) return;
+        const rect = overlay.getBoundingClientRect();
+        const mx = (ev.clientX - rect.left) * DPR;
+        const my = (ev.clientY - rect.top) * DPR;
+        const hit = nearPoint(mx,my);
+        if(hit<0) return toast('Tipp: die helleren Punkte anklicken.');
+
+        const expect = progress[progress.length-1];
+        if(hit===expect){
+            // first click is already seeded in progress; advance to next in edges
+            const next = active.edges.find(e=>e[0]===expect);
+            if(next){
+                progress.push(next[1]);
+                drawProgress();
+                if(progress.length-1 === active.edges.length){
+                    // finished drawing
+                    confetti();
+                    answerInput.focus();
+                }
+            }
+        } else {
+            toast('Upsi – Reihenfolge beachten 😉');
+        }
+    }
+
+    function normalizeName(s){
+        return s.toLowerCase().trim().replaceAll('ä','ae').replaceAll('ö','oe').replaceAll('ü','ue').replaceAll('ß','ss');
+    }
+
+    function checkAnswer(name){
+        const n = normalizeName(name);
+        const ok = n === normalizeName(active.display) || active.aliases.some(a=>normalizeName(a)===n);
+        if(ok){
+            found.add(active.id); saveFound(); rebuildLists();
+            showFortune(); pickNew();
+        }
+        return ok;
+    }
+
+    function showFortune(){
+        const dlg = document.getElementById('fortuneModal');
+        const text = document.getElementById('fortuneText');
+        text.textContent = FORTUNES[Math.floor(Math.random()*FORTUNES.length)];
+        dlg.showModal();
+    }
+
+    function confetti(){
+        const emojis = ['✨','🌟','💫','⭐','🌠','🟡','🟣','🔵'];
+        for(let i=0;i<26;i++){
+            const span = document.createElement('div');
+            span.className='confetti';
+            span.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+            span.style.left = Math.random()*100 + 'vw';
+            span.style.animationDelay = (Math.random()*0.5)+'s';
+            document.body.appendChild(span);
+            setTimeout(()=>span.remove(), 2500);
+        }
+    }
+
+    function toast(msg){
+        const t = document.createElement('div');
+        t.className='toast'; t.textContent=msg; document.body.appendChild(t);
+        setTimeout(()=>{t.remove();}, 1600);
+    }
+
+    // Long-press screenshot (PNG)
+    let pressTimer=null; skyWrap.addEventListener('pointerdown',()=>{pressTimer=setTimeout(()=>savePNG(),700)});
+    window.addEventListener('pointerup',()=>{clearTimeout(pressTimer)});
+    function savePNG(){
+        // Merge background + overlay into one image
+        const out = document.createElement('canvas'); out.width=sky.width; out.height=sky.height; const ict = out.getContext('2d');
+        ict.drawImage(sky,0,0); ict.drawImage(overlay,0,0);
+        const link = document.createElement('a'); link.download = 'sternenraetsel.png'; link.href = out.toDataURL('image/png'); link.click();
+        toast('Screenshot gespeichert!');
+    }
+
+    // --- Events ----------------------------------------------------------
+    overlay.addEventListener('click', handleClick);
+    btnNew.addEventListener('click', pickNew);
+    btnHints.addEventListener('click', ()=>{showHints=!showHints; drawProgress();});
+
+    answerForm.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const ok = checkAnswer(answerInput.value);
+        if(!ok){ toast('Fast! Tipp: deutsch oder lateinisch eingeben.'); }
+        answerInput.value='';
+    });
+
+    // Init
+    resize(); rebuildLists(); pickNew();
+
+    // subtle animation
+    (function loop(){ drawBackground(); drawStars(); drawProgress(); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>
