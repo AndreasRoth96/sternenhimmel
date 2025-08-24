@@ -102,7 +102,9 @@
     /* Star canvas */
     #skyWrap {
       position: relative;
-      overflow: hidden
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      min-height: 320px;
     }
 
     #sky {
@@ -301,18 +303,18 @@
       id: "ursa_minor",
       display: "Kleiner Wagen",
       aliases: ["kleiner wagen", "ursa minor", "kleine bärin", "little dipper", "kleiner bär"],
-      points: [[0.12, 0.35], [0.22, 0.40], [0.35, 0.45], [0.55, 0.48], [0.70, 0.52], [0.80, 0.60], [0.90, 0.75]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]
+      points: [[0.52, 0.15], [0.48, 0.28], [0.46, 0.45], [0.48, 0.66], [0.53, 0.85], [0.48, 0.95], [0.44, 0.73]],
+      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]
     },
     {
       id: "aries", display: "Widder", aliases: ["widder", "aries"],
-      points: [[0.25, 0.70], [0.35, 0.68], [0.47, 0.62]],
-      edges: [[0, 1], [1, 2]]
+      points: [[0.05, 0.20], [0.35, 0.28], [0.55, 0.42], [0.60, 0.63]],
+      edges: [[0, 1], [1, 2], [2, 3]]
     },
     {
       id: "taurus", display: "Stier", aliases: ["stier", "taurus"],
-      points: [[0.62, 0.28], [0.58, 0.36], [0.52, 0.42], [0.46, 0.47], [0.40, 0.50]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4]]
+      points: [[0.15, 0.1], [0.58, 0.52], [0.62, 0.56], [0.64, 0.60], [0.70, 0.63], [0.92, 0.64], [0.12, 0.48], [0.56, 0.63], [0.60, 0.62], [0.67, 0.1]],
+      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [6, 7], [7, 8], [8, 3], [9, 2]]
     },
     {
       id: "gemini", display: "Zwillinge", aliases: ["zwillinge", "gemini"],
@@ -332,9 +334,15 @@
   const ctx = sky.getContext('2d');
   const octx = overlay.getContext('2d');
 
-  const DPR = Math.min(2, window.devicePixelRatio || 1);
+
+
+  function getDPR(){
+    return Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  }
 
   function resize() {
+    DPR = getDPR();
+    stars = [];
     const rect = skyWrap.getBoundingClientRect();
     [sky, overlay].forEach(cv => {
       cv.width = Math.floor(rect.width * DPR);
@@ -398,6 +406,8 @@
   let edgeIdx = 0;
   let progress = [];
   let found = new Set(JSON.parse(localStorage.getItem('found-consts') || '[]'));
+  let DPR = getDPR();
+
 
   function saveFound() {
     localStorage.setItem('found-consts', JSON.stringify([...found]));
@@ -406,6 +416,10 @@
   function drawProgress() {
     octx.clearRect(0, 0, overlay.width, overlay.height);
     if (!active) return;
+
+    const edgeSet = new Set(
+      active.edges.flatMap(([a, b]) => [`${a}-${b}`, `${b}-${a}`])
+    );
 
     const w = overlay.width, h = overlay.height;
     const pts = active.points.map(([x, y]) => ({x: x * w, y: y * h}));
@@ -423,15 +437,25 @@
       octx.setLineDash([]);
     }
 
-    octx.strokeStyle = 'rgba(255,212,77,.95)';
-    octx.lineWidth = 3 * DPR;
-    octx.beginPath();
-    for (let i = 0; i < progress.length - 1; i++) {
-      const a = pts[progress[i]], b = pts[progress[i + 1]];
+     octx.strokeStyle = 'rgba(255,212,77,.95)';
+     octx.lineWidth = 3 * DPR;
+    /* octx.beginPath();
+     for (let i = 0; i < progress.length - 1; i++) {
+       const a = pts[progress[i]], b = pts[progress[i + 1]];
+       octx.moveTo(a.x, a.y);
+       octx.lineTo(b.x, b.y);
+     }
+     octx.stroke();*/
+    for (let i = 0; i < progress.length - 1; i++){
+      const aIdx = progress[i];
+      const bIdx = progress[i+1];
+      if(!edgeSet.has(`${aIdx}-${bIdx}`)) continue;
+      const a = pts[aIdx], b = pts[bIdx];
+      octx.beginPath();
       octx.moveTo(a.x, a.y);
       octx.lineTo(b.x, b.y);
+      octx.stroke();
     }
-    octx.stroke();
 
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i];
@@ -445,7 +469,7 @@
       octx.fill();
       octx.strokeStyle = 'rgba(0,0,0,.35)';
       octx.lineWidth = 1 * DPR;
-      octx.stroke();
+
     }
   }
 
@@ -470,6 +494,22 @@
         foundList.appendChild(li);
       }
     }
+
+    const li = document.createElement('li');
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Fortschritt zurücksetzen';
+    resetBtn.classList.add('primary');
+    resetBtn.addEventListener('click', () => {
+      if(!confirm('Gefundene Sternenbilder wirklich löschen?')) return;
+      found.clear();
+      saveFound();
+      rebuildLists();
+      pickNew();
+      toast('Fortschritt zurückgesetzt.')
+    });
+    li.style.justifyContent = 'center';
+    li.appendChild(resetBtn);
+    foundList.appendChild(li);
 
     availableList.innerHTML = '';
     for (const c of CONSTELLATIONS) {
@@ -563,7 +603,7 @@
 
   function confetti() {
     const emojis = ['✨', '🌟', '💫', '⭐', '🌠', '🟡', '🟣', '🔵'];
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 500; i++) {
       const span = document.createElement('div');
       span.className = 'confetti';
       span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -630,8 +670,14 @@
   rebuildLists();
   pickNew();
 
+  let lastDPR = getDPR();
   // subtle animation
   (function loop() {
+    const nowDPR = getDPR();
+    if(nowDPR !== lastDPR){
+      lastDPR = nowDPR;
+      resize();
+    }
     drawBackground();
     drawStars();
     drawProgress();
