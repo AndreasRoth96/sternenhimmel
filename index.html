@@ -316,7 +316,7 @@
       points: [[0.15, 0.1], [0.58, 0.52], [0.62, 0.56], [0.64, 0.60], [0.70, 0.63], [0.92, 0.64], [0.12, 0.48], [0.56, 0.63], [0.60, 0.62], [0.67, 0.1]],
       edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [6, 7], [7, 8], [8, 3], [9, 2]]
     },
-    {
+   /* {
       id: "gemini", display: "Zwillinge", aliases: ["zwillinge", "gemini"],
       points: [[0.20, 0.20], [0.26, 0.28], [0.33, 0.36], [0.40, 0.42], [0.28, 0.20], [0.35, 0.28], [0.42, 0.36], [0.49, 0.42]],
       edges: [[0, 1], [1, 2], [2, 3], [4, 5], [5, 6], [6, 7]]
@@ -325,7 +325,7 @@
       id: "leo", display: "Löwe", aliases: ["löwe", "loewe", "leo"],
       points: [[0.70, 0.78], [0.65, 0.70], [0.60, 0.64], [0.56, 0.56], [0.50, 0.50], [0.44, 0.46]],
       edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]
-    }
+    }*/
   ];
 
   const sky = document.getElementById('sky');
@@ -399,7 +399,7 @@
   const answerInput = document.getElementById('answer');
   const btnNew = document.getElementById('newPuzzle');
   const btnHints = document.getElementById('toggleHints');
-  const DEBUG = true;
+  const DEBUG = false;
 
   let showHints = false;
   let active = null;
