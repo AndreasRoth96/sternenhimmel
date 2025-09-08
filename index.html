@@ -132,7 +132,6 @@
       font-size: .95rem
     }
 
-    /* Fortune modal */
     dialog {
       border: none;
       background: rgba(15, 22, 50, .9);
@@ -166,7 +165,6 @@
       font-size: .8rem
     }
 
-    /* Confetti (emoji) */
     .confetti {
       position: fixed;
       top: -20px;
@@ -181,7 +179,6 @@
       }
     }
 
-    /* Lists */
     .list {
       display: flex;
       flex-direction: column;
@@ -237,7 +234,6 @@
   </header>
 
   <div class="wrap">
-    <!-- Sidebar -->
     <section class="panel card" aria-label="Seitenleiste">
       <h2 style="margin:.25rem 0 .25rem">Anleitung</h2>
       <p class="muted small">Finde das Sternbild, indem du die richtigen Sterne der Reihe nach antippst. Gib danach den
@@ -261,7 +257,6 @@
       <ul id="availableList" class="list"></ul>
     </section>
 
-    <!-- Sky -->
     <section id="skyWrap" class="panel card" aria-label="Sternenhimmel">
       <canvas id="sky" aria-label="Interaktiver Sternenhimmel"></canvas>
       <canvas id="overlay" class="hint" aria-hidden="true"></canvas>
@@ -316,16 +311,16 @@
       points: [[0.15, 0.1], [0.58, 0.52], [0.62, 0.56], [0.64, 0.60], [0.70, 0.63], [0.92, 0.64], [0.12, 0.48], [0.56, 0.63], [0.60, 0.62], [0.67, 0.1]],
       edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [6, 7], [7, 8], [8, 3], [9, 2]]
     },
-   /* {
+    {
       id: "gemini", display: "Zwillinge", aliases: ["zwillinge", "gemini"],
-      points: [[0.20, 0.20], [0.26, 0.28], [0.33, 0.36], [0.40, 0.42], [0.28, 0.20], [0.35, 0.28], [0.42, 0.36], [0.49, 0.42]],
-      edges: [[0, 1], [1, 2], [2, 3], [4, 5], [5, 6], [6, 7]]
+      points: [[0.4, 0.1], [0.2, 0.4], [0.35, 0.6], [0.5, 0.63], [0.75, 0.9], [0.75, 0.45], [0.9, 0.65], [0.98, 0.65]],
+      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [7, 6], [6, 5], [5, 0]]
     },
     {
-      id: "leo", display: "Löwe", aliases: ["löwe", "loewe", "leo"],
-      points: [[0.70, 0.78], [0.65, 0.70], [0.60, 0.64], [0.56, 0.56], [0.50, 0.50], [0.44, 0.46]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]
-    }*/
+      id: "cancer", display: "Krebs", aliases: ["krebs", "cancer"],
+      points: [[0.5, 0.1], [0.55, 0.4], [0.545, 0.55], [0.48, 0.78], [0.85, 0.9]],
+      edges: [[0, 1], [1, 2], [2, 3], [4, 2]]
+    }
   ];
 
   const sky = document.getElementById('sky');
@@ -399,7 +394,7 @@
   const answerInput = document.getElementById('answer');
   const btnNew = document.getElementById('newPuzzle');
   const btnHints = document.getElementById('toggleHints');
-  const DEBUG = false;
+  const DEBUG = true;
 
   let showHints = false;
   let active = null;
