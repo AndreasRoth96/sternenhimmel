@@ -490,7 +490,9 @@
 
 
     function getDPR() {
-      return Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+      const raw = window.devicePixelRatio || 1;
+      const cap = IS_MOBILE ? 2 : 3;
+      return Math.max(1, Math.min(cap, raw));
     }
 
     function resize() {
@@ -552,6 +554,9 @@
     const answerInput = document.getElementById('answer');
     const btnNew = document.getElementById('newPuzzle');
     const btnHints = document.getElementById('toggleHints');
+    const IS_COARSE = window.matchMedia('(pointer: coarse)').matches;
+    const IS_NARROW = window.matchMedia('(max-width: 900px)').matches;
+    const IS_MOBILE = IS_COARSE || IS_NARROW;
     const DEBUG = true;
 
     let showHints = DEBUG;
@@ -640,6 +645,8 @@
         lastActiveId = c.id;
         localStorage.setItem('debug-active', c.id);
         showHints = true;
+      } else {
+        showHints = IS_MOBILE;
       }
       drawBackground();
       drawStars();
@@ -715,7 +722,8 @@
     function nearPoint(mx, my) {
       const w = overlay.width, h = overlay.height;
       const pts = active.points.map(([x, y]) => ({x: x * w, y: y * h}));
-      const r = 14 * DPR;
+      const base = 14;
+      const r = (IS_COARSE ? base * 1.6 : base) * DPR;
       for (let i = 0; i < pts.length; i++) {
         const d = Math.hypot(mx - pts[i].x, my - pts[i].y);
         if (d <= r) return i;
