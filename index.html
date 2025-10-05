@@ -25,7 +25,7 @@
     .app {
       display: grid;
       grid-template-rows:auto 1fr auto;
-      min-height: 100%;
+      height: 100dvh;
     }
 
     header {
@@ -75,7 +75,13 @@
       display: grid;
       grid-template-columns:340px 1fr;
       gap: 1rem;
-      min-height: 0
+      min-height: 0;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
     @media (max-width: 900px) {
@@ -93,6 +99,12 @@
       border: 1px solid rgba(255, 255, 255, .08);
       border-radius: 1rem;
       box-shadow: 0 10px 30px rgba(0, 0, 0, .25)
+    }
+
+    .panel.card.sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
     .muted {
@@ -197,6 +209,15 @@
       border-radius: .6rem
     }
 
+    .lists-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding-right: .25rem;
+      scrollbar-gutter: stable both-edges;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .tag {
       font-size: .8rem;
       color: #b9c2e6
@@ -234,7 +255,7 @@
   </header>
 
   <div class="wrap">
-    <section class="panel card" aria-label="Seitenleiste">
+    <section class="panel card sidebar" aria-label="Seitenleiste">
       <h2 style="margin:.25rem 0 .25rem">Anleitung</h2>
       <p class="muted small">Finde das Sternbild, indem du die richtigen Sterne der Reihe nach antippst. Gib danach den
         Namen ein (deutsch oder lateinisch). Als Belohnung erhältst du eine Überraschung. 🥳</p>
@@ -249,12 +270,13 @@
         </form>
       </div>
 
+      <div class="lists-scroll">
+        <h3 style="margin:1rem 0 .25rem">Gefundene Sternbilder</h3>
+        <ul id="foundList" class="list" aria-live="polite"></ul>
 
-      <h3 style="margin:1rem 0 .25rem">Gefundene Sternbilder</h3>
-      <ul id="foundList" class="list" aria-live="polite"></ul>
-
-      <h3 style="margin:1rem 0 .25rem">Verfügbare Rätsel</h3>
-      <ul id="availableList" class="list"></ul>
+        <h3 style="margin:1rem 0 .25rem">Verfügbare Rätsel</h3>
+        <ul id="availableList" class="list"></ul>
+      </div>
     </section>
 
     <section id="skyWrap" class="panel card" aria-label="Sternenhimmel">
@@ -263,397 +285,391 @@
     </section>
   </div>
 
-  <footer class="panel" style="opacity:.9">
-    <span
-      class="muted small">Tipp: Langer Druck/Klick auf den Himmel erzeugt einen Screenshot (PNG) zum Verschenken.</span>
-  </footer>
-</div>
+  <dialog id="fortuneModal">
+    <div class="modal-header">
+      <div class="pill"><span>🍀</span> Glückskeks</div>
+    </div>
+    <p id="fortuneText" class="small" style="line-height:1.4"></p>
+    <form method="dialog" style="margin-top:.75rem">
+      <button autofocus>Weiter</button>
+    </form>
+  </dialog>
 
-<dialog id="fortuneModal">
-  <div class="modal-header">
-    <div class="pill"><span>🍀</span> Glückskeks</div>
-  </div>
-  <p id="fortuneText" class="small" style="line-height:1.4"></p>
-  <form method="dialog" style="margin-top:.75rem">
-    <button autofocus>Weiter</button>
-  </form>
-</dialog>
+  <script>
+    const FORTUNES = [
+      "Du unterschätzt, wie stark du bist.",
+      "Heute ist ein guter Tag, eine mutige Entscheidung zu treffen.",
+      "Kleine Schritte – große Wirkung.",
+      "Dein Lächeln verändert Räume.",
+      "Du darfst stolz auf dich sein.",
+      "Ein Kapitel endet, ein besseres beginnt.",
+      "Vertrau auf deinen Kompass, nicht auf den Wind.",
+      "Alles, was du brauchst, trägst du bereits in dir.",
+      "Dein Fleiß macht Türen auf, die andere nicht sehen.",
+      "Du bringst Licht in die Welt – weiter so!",
+    ];
 
-<script>
-  const FORTUNES = [
-    "Du unterschätzt, wie stark du bist.",
-    "Heute ist ein guter Tag, eine mutige Entscheidung zu treffen.",
-    "Kleine Schritte – große Wirkung.",
-    "Dein Lächeln verändert Räume.",
-    "Du darfst stolz auf dich sein.",
-    "Ein Kapitel endet, ein besseres beginnt.",
-    "Vertrau auf deinen Kompass, nicht auf den Wind.",
-    "Alles, was du brauchst, trägst du bereits in dir.",
-    "Dein Fleiß macht Türen auf, die andere nicht sehen.",
-    "Du bringst Licht in die Welt – weiter so!",
-  ];
+    const CONSTELLATIONS = [
+      {
+        id: "ursa_minor",
+        display: "Kleiner Wagen",
+        aliases: ["kleiner wagen", "ursa minor", "kleine bärin", "little dipper", "kleiner bär"],
+        points: [[0.52, 0.15], [0.48, 0.28], [0.46, 0.45], [0.48, 0.66], [0.53, 0.85], [0.48, 0.95], [0.44, 0.73]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]
+      },
+      {
+        id: "aries", display: "Widder", aliases: ["widder", "aries"],
+        points: [[0.05, 0.20], [0.35, 0.28], [0.55, 0.42], [0.60, 0.63]],
+        edges: [[0, 1], [1, 2], [2, 3]]
+      },
+      {
+        id: "taurus", display: "Stier", aliases: ["stier", "taurus"],
+        points: [[0.15, 0.1], [0.58, 0.52], [0.62, 0.56], [0.64, 0.60], [0.70, 0.63], [0.92, 0.64], [0.12, 0.48], [0.56, 0.63], [0.60, 0.62], [0.67, 0.1]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [6, 7], [7, 8], [8, 3], [9, 2]]
+      },
+      {
+        id: "gemini", display: "Zwillinge", aliases: ["zwillinge", "gemini"],
+        points: [[0.4, 0.1], [0.2, 0.4], [0.35, 0.6], [0.5, 0.63], [0.75, 0.9], [0.75, 0.45], [0.9, 0.65], [0.98, 0.65]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [7, 6], [6, 5], [5, 0]]
+      },
+      {
+        id: "cancer", display: "Krebs", aliases: ["krebs", "cancer"],
+        points: [[0.5, 0.1], [0.55, 0.4], [0.545, 0.55], [0.48, 0.78], [0.85, 0.9]],
+        edges: [[0, 1], [1, 2], [2, 3], [4, 2]]
+      },
+      {
+        id: "leo", display: "Löwe", aliases: ["löwe", "leo"],
+        points: [[0.96, 0.20], [0.91, 0.12], [0.8, 0.23], [0.79, 0.35], [0.85, 0.54], [0.88, 0.8], [0.45, 0.74], [0.15, 0.78], [0.45, 0.35]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 3]]
+      },
+      {
+        id: "virgo", display: "Jungfrau", aliases: ["jungfrau", "virgo"],
+        points: [[0.94, 0.35], [0.9, 0.5], [0.7, 0.56], [0.6, 0.57], [0.3, 0.72], [0.25, 0.85], [0.24, 0.55], [0.58, 0.2], [0.56, 0.35]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [6, 4], [7, 8], [8, 3]]
+      },
+      {
+        id: "libra", display: "Waage", aliases: ["waage", "libra"],
+        points: [[0.2, 0.7], [0.23, 0.6], [0.26, 0.5], [0.18, 0.23], [0.45, 0.25], [0.6, 0.5], [0.55, 0.8], [0.6, 0.85]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 3], [5, 6], [6, 7]]
+      },
+      {
+        id: "scorpio", display: "Skorpion", aliases: ["skorpion", "scorpio"],
+        points: [[0.24, 0.5], [0.18, 0.65], [0.3, 0.85], [0.4, 0.84], [0.5, 0.8], [0.51, 0.65], [0.5, 0.57], [0.55, 0.4], [0.56, 0.35], [0.6, 0.3], [0.64, 0.13], [0.72, 0.21], [0.75, 0.34]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [9, 11], [9, 12]]
+      },
+      {
+        id: "sagittarius", display: "Schütze", aliases: ["schütze", "sagittarius"],
+        points: [[0.24, 0.2], [0.2, 0.23], [0.3, 0.4], [0.38, 0.44], [0.5, 0.35], [0.6, 0.5], [0.59, 0.65], [0.63, 0.75], [0.67, 0.49], [0.6, 0.15], [0.22, 0.5], [0.25, 0.55]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [8, 5], [9, 4], [11, 10], [10, 2]]
+      },
+      {
+        id: "capricornus", display: "Steinbock", aliases: ["steinbock", "capricornus"],
+        points: [[0.2, 0.75], [0.25, 0.76], [0.32, 0.8], [0.48, 0.79], [0.6, 0.78], [0.61, 0.75], [0.65, 0.3], [0.35, 0.6], [0.28, 0.65], [0.21, 0.74], [0.7, 0.2]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [6, 10]]
+      },
+      {
+        id: "aquarius", display: "Wassermann", aliases: ["wassermann", "aquarius"],
+        points: [[0.65, 0.15], [0.45, 0.3], [0.35, 0.43], [0.48, 0.5], [0.6, 0.48], [0.36, 0.5], [0.34, 0.52], [0.335, 0.55], [0.5, 0.8], [0.55, 0.7], [0.6, 0.68], [0.62, 0.7], [0.68, 0.75]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [2, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12]]
+      },
+      {
+        id: "pisces", display: "Fische", aliases: ["fische", "pisces"],
+        points: [[0.2, 0.1], [0.19, 0.13], [0.205, 0.15], [0.24, 0.17], [0.28, 0.2], [0.275, 0.35], [0.28, 0.5], [0.28, 0.8], [0.3, 0.78], [0.32, 0.72], [0.35, 0.67], [0.44, 0.55], [0.48, 0.51], [0.6, 0.35], [0.65, 0.31], [0.68, 0.26], [0.71, 0.25], [0.74, 0.28], [0.73, 0.35], [0.69, 0.39]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14], [14, 15], [15, 16], [16, 17], [17, 18], [18, 19], [19, 14]]
+      },
+      {
+        id: "aquila", display: "Adler", aliases: ["adler", "aquila"],
+        points: [[0.5, 0.1], [0.45, 0.2], [0.4, 0.25], [0.2, 0.6], [0.6, 0.65], [0.8, 0.1], [0.65, 0.85]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 1], [1, 4], [4, 6]]
+      },
+      {
+        id: "bootes", display: "Bärenhüter", aliases: ["bärenhüter", "bootes"],
+        points: [[0.5, 0.1], [0.5, 0.2], [0.48, 0.33], [0.4, 0.3], [0.3, 0.4], [0.4, 0.65], [0.5, 0.85], [0.5, 0.6], [0.4, 0.95], [0.6, 0.87]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 2], [8, 6], [6, 9]]
+      },
+      {
+        id: "auriga", display: "Fuhrmann", aliases: ["fuhrmann", "auriga"],
+        points: [[0.9, 0.9], [0.4, 0.75], [0.1, 0.4], [0.09, 0.15], [0.45, 0.1], [0.6, 0.2], [0.63, 0.55]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]]
+      },
+      {
+        id: "ursa_major", display: "Großer Bär", aliases: ["großer bär", "ursa major"],
+        points: [[0.1, 0.7], [0.12, 0.67], [0.4, 0.4], [0.48, 0.35], [0.53, 0.27], [0.54, 0.15], [0.57, 0.05], [0.55, 0.5], [0.7, 0.65], [0.9, 0.8], [0.83, 0.67], [0.65, 0.43], [0.64, 0.8], [0.62, 0.95], [0.66, 0.95], [0.38, 0.57], [0.36, 0.7], [0.4, 0.69]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [3, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 4], [11, 7], [8, 12], [12, 13], [12, 14], [2, 15], [15, 16], [15, 17]]
+      },
+      {
+        id: "canis_major", display: "Großer Hund", aliases: ["großer hund", "canis major"],
+        points: [[0.6, 0.15], [0.45, 0.1], [0.4, 0.6], [0.37, 0.75], [0.23, 0.88], [0.51, 0.88], [0.6, 0.95]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [3, 5], [5, 6]]
+      },
+      {
+        id: "ursa_major_2", display: "Großer Wagen", aliases: ["großer wagen", "ursa major"],
+        points: [[0.5, 0.1], [0.52, 0.2], [0.5, 0.3], [0.49, 0.45], [0.35, 0.6], [0.4, 0.95], [0.55, 0.78]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]
+      },
+      {
+        id: "hercules", display: "Herkules", aliases: ["herkules", "hercules"],
+        points: [[0.8, 0.1], [0.77, 0.2], [0.75, 0.3], [0.76, 0.55], [0.79, 0.8], [0.83, 0.85], [0.7, 0.95], [0.6, 0.55], [0.55, 0.77], [0.35, 0.6], [0.3, 0.55], [0.25, 0.57], [0.57, 0.35], [0.2, 0.3], [0.25, 0.1]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [4, 6], [3, 7], [7, 8], [8, 9], [9, 10], [10, 11], [7, 12], [12, 13], [12, 2], [13, 14]]
+      },
+      {
+        id: "cassiopeia", display: "Kassiopeia", aliases: ["kassiopeia", "cassiopeia"],
+        points: [[0.2, 0.4], [0.4, 0.6], [0.5, 0.5], [0.6, 0.7], [0.7, 0.5]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4]]
+      },
+      {
+        id: "canis_minor", display: "Kleiner Hund", aliases: ["kleiner hund", "canis minor"],
+        points: [[0.4, 0.6], [0.7, 0.3]],
+        edges: [[0, 1]]
+      },
+      {
+        id: "leo_minor", display: "Kleiner Löwe", aliases: ["kleiner löwe", "leo minor"],
+        points: [[0.3, 0.7], [0.45, 0.55], [0.55, 0.56], [0.8, 0.45]],
+        edges: [[0, 1], [1, 2], [2, 3]]
+      },
+      {
+        id: "corona_borealis", display: "Nördliche Krone", aliases: ["nördliche krone", "corona borealis"],
+        points: [[0.3, 0.3], [0.35, 0.6], [0.45, 0.7], [0.5, 0.69], [0.55, 0.68], [0.6, 0.66], [0.68, 0.5], [0.64, 0.25]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7]]
+      },
+      {
+        id: "orion", display: "Orion", aliases: ["orion"],
+        points: [[0.3, 0.15], [0.6, 0.15], [0.55, 0.55], [0.48, 0.59], [0.4, 0.63], [0.34, 0.9], [0.7, 0.87]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [2, 6]]
+      },
+      {
+        id: "pegasus", display: "Pegasus", aliases: ["pegasus"],
+        points: [[0.2, 0.3], [0.15, 0.7], [0.45, 0.73], [0.48, 0.35], [0.6, 0.25], [0.6, 0.83], [0.8, 0.9], [0.9, 0.82]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [2, 5], [5, 6], [6, 7]]
+      },
+      {
+        id: "perseus", display: "Perseus", aliases: ["perseus"],
+        points: [[0.7, 0.2], [0.55, 0.4], [0.45, 0.6], [0.43, 0.65], [0.42, 0.72], [0.43, 0.82], [0.46, 0.83], [0.5, 0.45], [0.43, 0.48], [0.41, 0.46], [0.4, 0.42], [0.43, 0.43], [0.46, 0.43], [0.6, 0.41], [0.7, 0.4], [0.6, 0.6], [0.61, 0.7], [0.63, 0.75]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [1, 13], [13, 14], [1, 15], [15, 16], [16, 17]]
+      },
+      {
+        id: "cygnus", display: "Schwan", aliases: ["schwan", "cygnus"],
+        points: [[0.4, 0.25], [0.5, 0.45], [0.65, 0.75], [0.75, 0.9], [0.3, 0.75], [0.15, 0.83], [0.65, 0.3], [0.8, 0.1], [0.88, 0.05]],
+        edges: [[0, 1], [1, 2], [2, 3], [1, 4], [4, 5], [1, 6], [6, 7], [7, 8]]
+      }
+    ];
 
-  const CONSTELLATIONS = [
-    {
-      id: "ursa_minor",
-      display: "Kleiner Wagen",
-      aliases: ["kleiner wagen", "ursa minor", "kleine bärin", "little dipper", "kleiner bär"],
-      points: [[0.52, 0.15], [0.48, 0.28], [0.46, 0.45], [0.48, 0.66], [0.53, 0.85], [0.48, 0.95], [0.44, 0.73]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]
-    },
-    {
-      id: "aries", display: "Widder", aliases: ["widder", "aries"],
-      points: [[0.05, 0.20], [0.35, 0.28], [0.55, 0.42], [0.60, 0.63]],
-      edges: [[0, 1], [1, 2], [2, 3]]
-    },
-    {
-      id: "taurus", display: "Stier", aliases: ["stier", "taurus"],
-      points: [[0.15, 0.1], [0.58, 0.52], [0.62, 0.56], [0.64, 0.60], [0.70, 0.63], [0.92, 0.64], [0.12, 0.48], [0.56, 0.63], [0.60, 0.62], [0.67, 0.1]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [6, 7], [7, 8], [8, 3], [9, 2]]
-    },
-    {
-      id: "gemini", display: "Zwillinge", aliases: ["zwillinge", "gemini"],
-      points: [[0.4, 0.1], [0.2, 0.4], [0.35, 0.6], [0.5, 0.63], [0.75, 0.9], [0.75, 0.45], [0.9, 0.65], [0.98, 0.65]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [7, 6], [6, 5], [5, 0]]
-    },
-    {
-      id: "cancer", display: "Krebs", aliases: ["krebs", "cancer"],
-      points: [[0.5, 0.1], [0.55, 0.4], [0.545, 0.55], [0.48, 0.78], [0.85, 0.9]],
-      edges: [[0, 1], [1, 2], [2, 3], [4, 2]]
-    },
-    {
-      id: "leo", display: "Löwe", aliases: ["löwe", "leo"],
-      points: [[0.96, 0.20], [0.91, 0.12], [0.8, 0.23], [0.79, 0.35], [0.85, 0.54], [0.88, 0.8], [0.45, 0.74], [0.15, 0.78], [0.45, 0.35]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 3]]
-    },
-    {
-      id: "virgo", display: "Jungfrau", aliases: ["jungfrau", "virgo"],
-      points: [[0.94, 0.35], [0.9, 0.5], [0.7, 0.56], [0.6, 0.57], [0.3, 0.72], [0.25, 0.85], [0.24, 0.55], [0.58, 0.2], [0.56, 0.35]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [6, 4], [7, 8], [8, 3]]
-    },
-    {
-      id: "libra", display: "Waage", aliases: ["waage", "libra"],
-      points: [[0.2, 0.7], [0.23, 0.6], [0.26, 0.5], [0.18, 0.23], [0.45, 0.25], [0.6, 0.5], [0.55, 0.8], [0.6, 0.85]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 3], [5, 6], [6, 7]]
-    },
-    {
-      id: "scorpio", display: "Skorpion", aliases: ["skorpion", "scorpio"],
-      points: [[0.24, 0.5], [0.18, 0.65], [0.3, 0.85], [0.4, 0.84], [0.5, 0.8], [0.51, 0.65], [0.5, 0.57], [0.55, 0.4], [0.56, 0.35], [0.6, 0.3], [0.64, 0.13], [0.72, 0.21], [0.75, 0.34]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [9, 11], [9, 12]]
-    },
-    {
-      id: "sagittarius", display: "Schütze", aliases: ["schütze", "sagittarius"],
-      points: [[0.24, 0.2], [0.2, 0.23], [0.3, 0.4], [0.38, 0.44], [0.5, 0.35], [0.6, 0.5], [0.59, 0.65], [0.63, 0.75], [0.67, 0.49], [0.6, 0.15], [0.22, 0.5], [0.25, 0.55]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [8, 5], [9, 4], [11, 10], [10, 2]]
-    },
-    {
-      id: "capricornus", display: "Steinbock", aliases: ["steinbock", "capricornus"],
-      points: [[0.2, 0.75], [0.25, 0.76], [0.32, 0.8], [0.48, 0.79], [0.6, 0.78], [0.61, 0.75], [0.65, 0.3], [0.35, 0.6], [0.28, 0.65], [0.21, 0.74], [0.7, 0.2]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [6, 10]]
-    },
-    {
-      id: "aquarius", display: "Wassermann", aliases: ["wassermann", "aquarius"],
-      points: [[0.65, 0.15], [0.45, 0.3], [0.35, 0.43], [0.48, 0.5], [0.6, 0.48], [0.36, 0.5], [0.34, 0.52], [0.335, 0.55], [0.5, 0.8], [0.55, 0.7], [0.6, 0.68], [0.62, 0.7], [0.68, 0.75]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [2, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12]]
-    },
-    {
-      id: "pisces", display: "Fische", aliases: ["fische", "pisces"],
-      points: [[0.2, 0.1], [0.19, 0.13], [0.205, 0.15], [0.24, 0.17], [0.28, 0.2], [0.275, 0.35], [0.28, 0.5], [0.28, 0.8], [0.3, 0.78], [0.32, 0.72], [0.35, 0.67], [0.44, 0.55], [0.48, 0.51], [0.6, 0.35], [0.65, 0.31], [0.68, 0.26], [0.71, 0.25], [0.74, 0.28], [0.73, 0.35], [0.69, 0.39]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14], [14, 15], [15, 16], [16, 17], [17, 18], [18, 19], [19, 14]]
-    },
-    {
-      id: "aquila", display: "Adler", aliases: ["adler", "aquila"],
-      points: [[0.5, 0.1], [0.45, 0.2], [0.4, 0.25], [0.2, 0.6], [0.6, 0.65], [0.8, 0.1], [0.65, 0.85]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 1], [1, 4], [4, 6]]
-    },
-    {
-      id: "bootes", display: "Bärenhüter", aliases: ["bärenhüter", "bootes"],
-      points: [[0.5, 0.1], [0.5, 0.2], [0.48, 0.33], [0.4, 0.3], [0.3, 0.4], [0.4, 0.65], [0.5, 0.85], [0.5, 0.6], [0.4, 0.95], [0.6, 0.87]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 2], [8, 6], [6, 9]]
-    },
-    {
-      id: "auriga", display: "Fuhrmann", aliases: ["fuhrmann", "auriga"],
-      points: [[0.9, 0.9], [0.4, 0.75], [0.1, 0.4], [0.09, 0.15], [0.45, 0.1], [0.6, 0.2], [0.63, 0.55]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]]
-    },
-    {
-      id: "ursa_major", display: "Großer Bär", aliases: ["großer bär", "ursa major"],
-      points: [[0.1, 0.7], [0.12, 0.67], [0.4, 0.4], [0.48, 0.35], [0.53, 0.27], [0.54, 0.15], [0.57, 0.05], [0.55, 0.5], [0.7, 0.65], [0.9, 0.8], [0.83, 0.67], [0.65, 0.43], [0.64, 0.8], [0.62, 0.95], [0.66, 0.95], [0.38, 0.57], [0.36, 0.7], [0.4, 0.69]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [3, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 4], [11, 7], [8, 12], [12, 13], [12, 14], [2, 15], [15, 16], [15, 17]]
-    },
-    {
-      id: "canis_major", display: "Großer Hund", aliases: ["großer hund", "canis major"],
-      points: [[0.6, 0.15], [0.45, 0.1], [0.4, 0.6], [0.37, 0.75], [0.23, 0.88], [0.51, 0.88], [0.6, 0.95]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [3, 5], [5, 6]]
-    },
-    {
-      id: "ursa_major_2", display: "Großer Wagen", aliases: ["großer wagen", "ursa major"],
-      points: [[0.5, 0.1], [0.52, 0.2], [0.5, 0.3], [0.49, 0.45], [0.35, 0.6], [0.4, 0.95], [0.55, 0.78]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]
-    },
-    {
-      id: "hercules", display: "Herkules", aliases: ["herkules", "hercules"],
-      points: [[0.8, 0.1], [0.77, 0.2], [0.75, 0.3], [0.76, 0.55], [0.79, 0.8], [0.83, 0.85], [0.7, 0.95], [0.6, 0.55], [0.55, 0.77], [0.35, 0.6], [0.3, 0.55], [0.25, 0.57], [0.57, 0.35], [0.2, 0.3], [0.25, 0.1]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [4, 6], [3, 7], [7, 8], [8, 9], [9, 10], [10, 11], [7, 12], [12, 13], [12, 2], [13, 14]]
-    },
-    {
-      id: "cassiopeia", display: "Kassiopeia", aliases: ["kassiopeia", "cassiopeia"],
-      points: [[0.2, 0.4], [0.4, 0.6], [0.5, 0.5], [0.6, 0.7], [0.7, 0.5]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4]]
-    },
-    {
-      id: "canis_minor", display: "Kleiner Hund", aliases: ["kleiner hund", "canis minor"],
-      points: [[0.4, 0.6], [0.7, 0.3]],
-      edges: [[0, 1]]
-    },
-    {
-      id: "leo_minor", display: "Kleiner Löwe", aliases: ["kleiner löwe", "leo minor"],
-      points: [[0.3, 0.7], [0.45, 0.55], [0.55, 0.56], [0.8, 0.45]],
-      edges: [[0, 1], [1, 2], [2, 3]]
-    },
-    {
-      id: "corona_borealis", display: "Nördliche Krone", aliases: ["nördliche krone", "corona borealis"],
-      points: [[0.3, 0.3], [0.35, 0.6], [0.45, 0.7], [0.5, 0.69], [0.55, 0.68], [0.6, 0.66], [0.68, 0.5], [0.64, 0.25]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7]]
-    },
-    {
-      id: "orion", display: "Orion", aliases: ["orion"],
-      points: [[0.3, 0.15], [0.6, 0.15], [0.55, 0.55], [0.48, 0.59], [0.4, 0.63], [0.34, 0.9], [0.7, 0.87]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [2, 6]]
-    },
-    {
-      id: "pegasus", display: "Pegasus", aliases: ["pegasus"],
-      points: [[0.2, 0.3], [0.15, 0.7], [0.45, 0.73], [0.48, 0.35], [0.6, 0.25], [0.6, 0.83], [0.8, 0.9], [0.9, 0.82]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [2, 5], [5, 6], [6, 7]]
-    },
-    {
-      id: "perseus", display: "Perseus", aliases: ["perseus"],
-      points: [[0.7, 0.2], [0.55, 0.4], [0.45, 0.6], [0.43, 0.65], [0.42, 0.72], [0.43, 0.82], [0.46, 0.83], [0.5, 0.45], [0.43, 0.48], [0.41, 0.46], [0.4, 0.42], [0.43, 0.43], [0.46, 0.43], [0.6, 0.41], [0.7, 0.4], [0.6, 0.6], [0.61, 0.7], [0.63, 0.75]],
-      edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [1, 13], [13, 14], [1, 15], [15, 16], [16, 17]]
-    },
-    {
-      id: "cygnus", display: "Schwan", aliases: ["schwan", "cygnus"],
-      points: [[0.4, 0.25], [0.5, 0.45], [0.65, 0.75], [0.75, 0.9], [0.3, 0.75], [0.15, 0.83], [0.65, 0.3], [0.8, 0.1], [0.88, 0.05]],
-      edges: [[0, 1], [1, 2], [2, 3], [1, 4], [4, 5], [1, 6], [6, 7], [7, 8]]
+    const sky = document.getElementById('sky');
+    const overlay = document.getElementById('overlay');
+    const skyWrap = document.getElementById('skyWrap');
+    const ctx = sky.getContext('2d');
+    const octx = overlay.getContext('2d');
+
+
+    function getDPR() {
+      return Math.max(1, Math.min(3, window.devicePixelRatio || 1));
     }
-  ];
 
-  const sky = document.getElementById('sky');
-  const overlay = document.getElementById('overlay');
-  const skyWrap = document.getElementById('skyWrap');
-  const ctx = sky.getContext('2d');
-  const octx = overlay.getContext('2d');
-
-
-  function getDPR() {
-    return Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-  }
-
-  function resize() {
-    DPR = getDPR();
-    stars = [];
-    const rect = skyWrap.getBoundingClientRect();
-    [sky, overlay].forEach(cv => {
-      cv.width = Math.floor(rect.width * DPR);
-      cv.height = Math.floor((rect.height) * DPR);
-      cv.style.width = rect.width + "px";
-      cv.style.height = rect.height + "px";
-    });
-    drawBackground();
-    drawStars();
-    drawProgress();
-  }
-
-  window.addEventListener('resize', resize);
-
-  let stars = [];
-
-  function randomStars(n) {
-    const arr = [];
-    const w = sky.width, h = sky.height;
-    for (let i = 0; i < n; i++) {
-      arr.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        r: (Math.random() * 1.2 + 0.4) * DPR,
-        tw: Math.random() * Math.PI * 2
+    function resize() {
+      DPR = getDPR();
+      stars = [];
+      const rect = skyWrap.getBoundingClientRect();
+      [sky, overlay].forEach(cv => {
+        cv.width = Math.floor(rect.width * DPR);
+        cv.height = Math.floor((rect.height) * DPR);
+        cv.style.width = rect.width + "px";
+        cv.style.height = rect.height + "px";
       });
+      drawBackground();
+      drawStars();
+      drawProgress();
     }
-    return arr;
-  }
 
-  function drawBackground() {
-    const g = ctx.createLinearGradient(0, 0, sky.width, sky.height);
-    g.addColorStop(0, 'rgba(20,32,72,.9)');
-    g.addColorStop(1, 'rgba(6,10,24,.95)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, sky.width, sky.height);
-  }
+    window.addEventListener('resize', resize);
 
-  function drawStars() {
-    if (!stars.length) stars = randomStars(220);
-    for (const s of stars) {
-      const twinkle = (Math.sin(Date.now() / 700 + s.tw) * 0.4 + 0.6);
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r * twinkle, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${0.6 + 0.4 * Math.random()})`;
-      ctx.fill();
-    }
-  }
+    let stars = [];
 
-  const activeNameEl = document.getElementById('activeName');
-  const foundList = document.getElementById('foundList');
-  const availableList = document.getElementById('availableList');
-  const answerForm = document.getElementById('answerForm');
-  const answerInput = document.getElementById('answer');
-  const btnNew = document.getElementById('newPuzzle');
-  const btnHints = document.getElementById('toggleHints');
-  const DEBUG = true;
-
-  let showHints = DEBUG;
-  let active = null;
-  let edgeIdx = 0;
-  let progress = [];
-  let found = new Set(JSON.parse(localStorage.getItem('found-consts') || '[]'));
-  let DPR = getDPR();
-  let lastActiveId = localStorage.getItem('debug-active') || null;
-
-
-  function saveFound() {
-    localStorage.setItem('found-consts', JSON.stringify([...found]));
-  }
-
-  function drawProgress() {
-    octx.clearRect(0, 0, overlay.width, overlay.height);
-    if (!active) return;
-
-    const edgeSet = new Set(
-      active.edges.flatMap(([a, b]) => [`${a}-${b}`, `${b}-${a}`])
-    );
-
-    const w = overlay.width, h = overlay.height;
-    const pts = active.points.map(([x, y]) => ({x: x * w, y: y * h}));
-
-    if (showHints) {
-      octx.strokeStyle = 'rgba(255,255,255,.15)';
-      octx.lineWidth = 2 * DPR;
-      octx.setLineDash([6 * DPR, 6 * DPR]);
-      octx.beginPath();
-      for (const [a, b] of active.edges) {
-        octx.moveTo(pts[a].x, pts[a].y);
-        octx.lineTo(pts[b].x, pts[b].y);
+    function randomStars(n) {
+      const arr = [];
+      const w = sky.width, h = sky.height;
+      for (let i = 0; i < n; i++) {
+        arr.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: (Math.random() * 1.2 + 0.4) * DPR,
+          tw: Math.random() * Math.PI * 2
+        });
       }
-      octx.stroke();
-      octx.setLineDash([]);
+      return arr;
     }
 
-    octx.strokeStyle = 'rgba(255,212,77,.95)';
-    octx.lineWidth = 3 * DPR;
-    /* octx.beginPath();
-     for (let i = 0; i < progress.length - 1; i++) {
-       const a = pts[progress[i]], b = pts[progress[i + 1]];
-       octx.moveTo(a.x, a.y);
-       octx.lineTo(b.x, b.y);
-     }
-     octx.stroke();*/
-    for (let i = 0; i < progress.length - 1; i++) {
-      const aIdx = progress[i];
-      const bIdx = progress[i + 1];
-      if (!edgeSet.has(`${aIdx}-${bIdx}`)) continue;
-      const a = pts[aIdx], b = pts[bIdx];
-      octx.beginPath();
-      octx.moveTo(a.x, a.y);
-      octx.lineTo(b.x, b.y);
-      octx.stroke();
+    function drawBackground() {
+      const g = ctx.createLinearGradient(0, 0, sky.width, sky.height);
+      g.addColorStop(0, 'rgba(20,32,72,.9)');
+      g.addColorStop(1, 'rgba(6,10,24,.95)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, sky.width, sky.height);
     }
 
-    for (let i = 0; i < pts.length; i++) {
-      const p = pts[i];
-      const isStart = (i === 0);
-      const done = progress.includes(i);
-      const shouldBeYellow = done || (isStart && progress.length === 0);
-
-      octx.beginPath();
-      octx.arc(p.x, p.y, 6 * DPR, 0, Math.PI * 2);
-      octx.fillStyle = shouldBeYellow ? 'rgba(255, 212, 77, .95)' : 'rgba(255, 255, 255, .6)';
-      octx.fill();
-      octx.strokeStyle = 'rgba(0,0,0,.35)';
-      octx.lineWidth = 1 * DPR;
-
-    }
-  }
-
-  function getById(id) {
-    return CONSTELLATIONS.find(c => c.id === id) || null;
-  }
-
-  function startPuzzle(c) {
-    active = c;
-    edgeIdx = 0;
-    progress = [0];
-    activeNameEl.textContent = DEBUG ? active.display : "???";
-    if(DEBUG) {
-      lastActiveId = c.id;
-      localStorage.setItem('debug-active', c.id);
-      showHints = true;
-    }
-    drawBackground();
-    drawStars();
-    drawProgress();
-    answerInput.value = '';
-  }
-
-  function pickNew() {
-    if (DEBUG && lastActiveId) {
-      const same = getById(lastActiveId);
-      if (same)
-        return startPuzzle(same);
-    }
-    const pool = CONSTELLATIONS.filter(c => !found.has(c.id));
-    const choice = pool.length ? pool[Math.floor(Math.random() * pool.length)] : CONSTELLATIONS[Math.floor(Math.random() * CONSTELLATIONS.length)];
-    startPuzzle(choice);
-    /*active = pool.length ? pool[Math.floor(Math.random() * pool.length)] : CONSTELLATIONS[Math.floor(Math.random() * CONSTELLATIONS.length)];
-    edgeIdx = 0;
-    progress = [0];
-    activeNameEl.textContent = DEBUG ? active.display : "???";
-    drawBackground();
-    drawStars();
-    drawProgress();
-    answerInput.value = '';*/
-  }
-
-  function rebuildLists() {
-    foundList.innerHTML = '';
-    for (const c of CONSTELLATIONS) {
-      if (found.has(c.id)) {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>✅ ${c.display}</span><span class="tag">gefunden</span>`;
-        foundList.appendChild(li);
+    function drawStars() {
+      if (!stars.length) stars = randomStars(220);
+      for (const s of stars) {
+        const twinkle = (Math.sin(Date.now() / 700 + s.tw) * 0.4 + 0.6);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r * twinkle, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${0.6 + 0.4 * Math.random()})`;
+        ctx.fill();
       }
     }
 
-    const li = document.createElement('li');
-    const resetBtn = document.createElement('button');
-    resetBtn.textContent = 'Fortschritt zurücksetzen';
-    resetBtn.classList.add('primary');
-    resetBtn.addEventListener('click', () => {
-      if (!confirm('Gefundene Sternenbilder wirklich löschen?')) return;
-      found.clear();
-      saveFound();
-      rebuildLists();
-      pickNew();
-      toast('Fortschritt zurückgesetzt.')
-    });
-    //resetBtn.addEventListener('click', () => startPuzzle(c));
-    li.style.justifyContent = 'center';
-    li.appendChild(resetBtn);
-    foundList.appendChild(li);
+    const activeNameEl = document.getElementById('activeName');
+    const foundList = document.getElementById('foundList');
+    const availableList = document.getElementById('availableList');
+    const answerForm = document.getElementById('answerForm');
+    const answerInput = document.getElementById('answer');
+    const btnNew = document.getElementById('newPuzzle');
+    const btnHints = document.getElementById('toggleHints');
+    const DEBUG = true;
 
-    availableList.innerHTML = '';
-    for (const c of CONSTELLATIONS) {
+    let showHints = DEBUG;
+    let active = null;
+    let edgeIdx = 0;
+    let progress = [];
+    let found = new Set(JSON.parse(localStorage.getItem('found-consts') || '[]'));
+    let DPR = getDPR();
+    let lastActiveId = localStorage.getItem('debug-active') || null;
+
+
+    function saveFound() {
+      localStorage.setItem('found-consts', JSON.stringify([...found]));
+    }
+
+    function drawProgress() {
+      octx.clearRect(0, 0, overlay.width, overlay.height);
+      if (!active) return;
+
+      const edgeSet = new Set(
+        active.edges.flatMap(([a, b]) => [`${a}-${b}`, `${b}-${a}`])
+      );
+
+      const w = overlay.width, h = overlay.height;
+      const pts = active.points.map(([x, y]) => ({x: x * w, y: y * h}));
+
+      if (showHints) {
+        octx.strokeStyle = 'rgba(255,255,255,.15)';
+        octx.lineWidth = 2 * DPR;
+        octx.setLineDash([6 * DPR, 6 * DPR]);
+        octx.beginPath();
+        for (const [a, b] of active.edges) {
+          octx.moveTo(pts[a].x, pts[a].y);
+          octx.lineTo(pts[b].x, pts[b].y);
+        }
+        octx.stroke();
+        octx.setLineDash([]);
+      }
+
+      octx.strokeStyle = 'rgba(255,212,77,.95)';
+      octx.lineWidth = 3 * DPR;
+      /* octx.beginPath();
+       for (let i = 0; i < progress.length - 1; i++) {
+         const a = pts[progress[i]], b = pts[progress[i + 1]];
+         octx.moveTo(a.x, a.y);
+         octx.lineTo(b.x, b.y);
+       }
+       octx.stroke();*/
+      for (let i = 0; i < progress.length - 1; i++) {
+        const aIdx = progress[i];
+        const bIdx = progress[i + 1];
+        if (!edgeSet.has(`${aIdx}-${bIdx}`)) continue;
+        const a = pts[aIdx], b = pts[bIdx];
+        octx.beginPath();
+        octx.moveTo(a.x, a.y);
+        octx.lineTo(b.x, b.y);
+        octx.stroke();
+      }
+
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        const isStart = (i === 0);
+        const done = progress.includes(i);
+        const shouldBeYellow = done || (isStart && progress.length === 0);
+
+        octx.beginPath();
+        octx.arc(p.x, p.y, 6 * DPR, 0, Math.PI * 2);
+        octx.fillStyle = shouldBeYellow ? 'rgba(255, 212, 77, .95)' : 'rgba(255, 255, 255, .6)';
+        octx.fill();
+        octx.strokeStyle = 'rgba(0,0,0,.35)';
+        octx.lineWidth = 1 * DPR;
+
+      }
+    }
+
+    function getById(id) {
+      return CONSTELLATIONS.find(c => c.id === id) || null;
+    }
+
+    function startPuzzle(c) {
+      active = c;
+      edgeIdx = 0;
+      progress = [0];
+      activeNameEl.textContent = DEBUG ? active.display : "???";
+      if (DEBUG) {
+        lastActiveId = c.id;
+        localStorage.setItem('debug-active', c.id);
+        showHints = true;
+      }
+      drawBackground();
+      drawStars();
+      drawProgress();
+      answerInput.value = '';
+    }
+
+    function pickNew() {
+      if (DEBUG && lastActiveId) {
+        const same = getById(lastActiveId);
+        if (same)
+          return startPuzzle(same);
+      }
+      const pool = CONSTELLATIONS.filter(c => !found.has(c.id));
+      const choice = pool.length ? pool[Math.floor(Math.random() * pool.length)] : CONSTELLATIONS[Math.floor(Math.random() * CONSTELLATIONS.length)];
+      startPuzzle(choice);
+      /*active = pool.length ? pool[Math.floor(Math.random() * pool.length)] : CONSTELLATIONS[Math.floor(Math.random() * CONSTELLATIONS.length)];
+      edgeIdx = 0;
+      progress = [0];
+      activeNameEl.textContent = DEBUG ? active.display : "???";
+      drawBackground();
+      drawStars();
+      drawProgress();
+      answerInput.value = '';*/
+    }
+
+    function rebuildLists() {
+      foundList.innerHTML = '';
+      for (const c of CONSTELLATIONS) {
+        if (found.has(c.id)) {
+          const li = document.createElement('li');
+          li.innerHTML = `<span>✅ ${c.display}</span><span class="tag">gefunden</span>`;
+          foundList.appendChild(li);
+        }
+      }
+
       const li = document.createElement('li');
-      const btn = document.createElement('button');
-      btn.textContent = 'Starten';
+      const resetBtn = document.createElement('button');
+      resetBtn.textContent = 'Fortschritt zurücksetzen';
+      resetBtn.classList.add('primary');
+      resetBtn.addEventListener('click', () => {
+        if (!confirm('Gefundene Sternenbilder wirklich löschen?')) return;
+        found.clear();
+        saveFound();
+        rebuildLists();
+        pickNew();
+        toast('Fortschritt zurückgesetzt.')
+      });
+      //resetBtn.addEventListener('click', () => startPuzzle(c));
+      li.style.justifyContent = 'center';
+      li.appendChild(resetBtn);
+      foundList.appendChild(li);
+
+      availableList.innerHTML = '';
+      for (const c of CONSTELLATIONS) {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.textContent = 'Starten';
         /*btn.addEventListener('click', () => {
         active = c;
         edgeIdx = 0;
@@ -661,172 +677,176 @@
         activeNameEl.textContent = c.display;
         drawProgress();
       });*/
-      btn.addEventListener('click', () => startPuzzle(c));
-      li.innerHTML = `<span>${found.has(c.id) ? '⭐' : ''} ${c.display}</span>`;
-      li.appendChild(btn);
-      availableList.appendChild(li);
-    }
-  }
-
-  function nearPoint(mx, my) {
-    const w = overlay.width, h = overlay.height;
-    const pts = active.points.map(([x, y]) => ({x: x * w, y: y * h}));
-    const r = 14 * DPR;
-    for (let i = 0; i < pts.length; i++) {
-      const d = Math.hypot(mx - pts[i].x, my - pts[i].y);
-      if (d <= r) return i;
-    }
-    return -1;
-  }
-
-  function handleClick(ev) {
-    if (!active) return;
-    const rect = overlay.getBoundingClientRect();
-    const mx = (ev.clientX - rect.left) * DPR;
-    const my = (ev.clientY - rect.top) * DPR;
-    const hit = nearPoint(mx, my);
-    if (hit < 0) return toast('Tipp: die helleren Punkte anklicken.');
-
-    const last = progress.length ? progress[progress.length - 1] : null;
-    let curr = active.edges[edgeIdx];
-    if (!curr) return;
-    let expect; // = (last === null) ? 0 : (active.edges.find(e => e[0] === last) || [null, null])[1];
-    if (last === null) {
-      expect = curr[0];
-    } else if (last === curr[0]) {
-      expect = curr[1];
-    } else if (last === curr[1]) {
-      expect = active.edges[edgeIdx + 1]?.[0] ?? null;
-    } else {
-      expect = curr[0];
-    }
-    if (hit === expect) {
-
-      progress.push(hit);
-      drawProgress();
-      if (curr && hit === curr[1]) edgeIdx++;
-      const finished = edgeIdx === active.edges.length;
-      if (finished) {
-        confetti();
-        answerInput.focus();
+        btn.addEventListener('click', () => startPuzzle(c));
+        li.innerHTML = `<span>${found.has(c.id) ? '⭐' : ''} ${c.display}</span>`;
+        li.appendChild(btn);
+        availableList.appendChild(li);
       }
-
-    } else {
-      toast('Upsi – Reihenfolge beachten 😉');
     }
-  }
 
-  function normalizeName(s) {
-    return s.toLowerCase().trim().replaceAll('ä', 'ae').replaceAll('ö', 'oe').replaceAll('ü', 'ue').replaceAll('ß', 'ss');
-  }
+    function nearPoint(mx, my) {
+      const w = overlay.width, h = overlay.height;
+      const pts = active.points.map(([x, y]) => ({x: x * w, y: y * h}));
+      const r = 14 * DPR;
+      for (let i = 0; i < pts.length; i++) {
+        const d = Math.hypot(mx - pts[i].x, my - pts[i].y);
+        if (d <= r) return i;
+      }
+      return -1;
+    }
 
-  function checkAnswer(name) {
-    const n = normalizeName(name);
-    const ok = n === normalizeName(active.display) || active.aliases.some(a => normalizeName(a) === n);
-    if(DEBUG) {
-      edgeIdx = 0;
-      progress = [0];
+    function handleClick(ev) {
+      if (!active) return;
+      const rect = overlay.getBoundingClientRect();
+      const mx = (ev.clientX - rect.left) * DPR;
+      const my = (ev.clientY - rect.top) * DPR;
+      const hit = nearPoint(mx, my);
+      if (hit < 0) return toast('Tipp: die helleren Punkte anklicken.');
+
+      const last = progress.length ? progress[progress.length - 1] : null;
+      let curr = active.edges[edgeIdx];
+      if (!curr) return;
+      let expect; // = (last === null) ? 0 : (active.edges.find(e => e[0] === last) || [null, null])[1];
+      if (last === null) {
+        expect = curr[0];
+      } else if (last === curr[0]) {
+        expect = curr[1];
+      } else if (last === curr[1]) {
+        expect = active.edges[edgeIdx + 1]?.[0] ?? null;
+      } else {
+        expect = curr[0];
+      }
+      if (hit === expect) {
+
+        progress.push(hit);
+        drawProgress();
+        if (curr && hit === curr[1]) edgeIdx++;
+        const finished = edgeIdx === active.edges.length;
+        if (finished) {
+          confetti();
+          answerInput.focus();
+        }
+
+      } else {
+        toast('Upsi – Reihenfolge beachten 😉');
+      }
+    }
+
+    function normalizeName(s) {
+      return s.toLowerCase().trim().replaceAll('ä', 'ae').replaceAll('ö', 'oe').replaceAll('ü', 'ue').replaceAll('ß', 'ss');
+    }
+
+    function checkAnswer(name) {
+      if (!active)
+        return false;
+      const n = normalizeName(name);
+      const ok = n && (n === normalizeName(active.display) || active.aliases.some(a => normalizeName(a) === n));
+      if (ok) {
+        if (DEBUG) {
+          edgeIdx = 0;
+          progress = [0];
+          drawProgress();
+          toast('Debug: Richtige Lösung - Fortschritt zurückgesetzt.');
+        } else {
+          found.add(active.id);
+          saveFound();
+          rebuildLists();
+          showFortune();
+          pickNew();
+        }
+      }
+      return ok;
+    }
+
+    function showFortune() {
+      const dlg = document.getElementById('fortuneModal');
+      const text = document.getElementById('fortuneText');
+      text.textContent = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+      dlg.showModal();
+    }
+
+    function confetti() {
+      const emojis = ['✨', '🌟', '💫', '⭐', '🌠', '🟡', '🟣', '🔵'];
+      for (let i = 0; i < 500; i++) {
+        const span = document.createElement('div');
+        span.className = 'confetti';
+        span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        span.style.left = Math.random() * 100 + 'vw';
+        span.style.animationDelay = (Math.random() * 0.5) + 's';
+        document.body.appendChild(span);
+        setTimeout(() => span.remove(), 2500);
+      }
+    }
+
+    function toast(msg) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => {
+        t.remove();
+      }, 1600);
+    }
+
+    // Long-press screenshot (PNG)
+    /*let pressTimer = null;
+    skyWrap.addEventListener('pointerdown', () => {
+      pressTimer = setTimeout(() => savePNG(), 700)
+    });
+    window.addEventListener('pointerup', () => {
+      clearTimeout(pressTimer)
+    });*/
+
+    /*function savePNG() {
+      // Merge background + overlay into one image
+      const out = document.createElement('canvas');
+      out.width = sky.width;
+      out.height = sky.height;
+      const ict = out.getContext('2d');
+      ict.drawImage(sky, 0, 0);
+      ict.drawImage(overlay, 0, 0);
+      const link = document.createElement('a');
+      link.download = 'sternenraetsel.png';
+      link.href = out.toDataURL('image/png');
+      link.click();
+      toast('Screenshot gespeichert!');
+    }*/
+
+    // --- Events ----------------------------------------------------------
+    overlay.addEventListener('click', handleClick);
+    btnNew.addEventListener('click', pickNew);
+    btnHints.addEventListener('click', () => {
+      showHints = !showHints;
       drawProgress();
-      toast('Debug: Richtige Lösung - Fortschritt zurückgesetzt.');
-    } else {
-      found.add(active.id);
-      saveFound();
-      rebuildLists();
-      showFortune();
-        pickNew();
-    }
-    return ok;
-  }
+    });
 
-  function showFortune() {
-    const dlg = document.getElementById('fortuneModal');
-    const text = document.getElementById('fortuneText');
-    text.textContent = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
-    dlg.showModal();
-  }
+    answerForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const ok = checkAnswer(answerInput.value);
+      if (!ok) {
+          toast('Fast! Tipp: deutsch oder lateinisch eingeben.');
+      }
+      answerInput.value = '';
+    });
 
-  function confetti() {
-    const emojis = ['✨', '🌟', '💫', '⭐', '🌠', '🟡', '🟣', '🔵'];
-    for (let i = 0; i < 500; i++) {
-      const span = document.createElement('div');
-      span.className = 'confetti';
-      span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-      span.style.left = Math.random() * 100 + 'vw';
-      span.style.animationDelay = (Math.random() * 0.5) + 's';
-      document.body.appendChild(span);
-      setTimeout(() => span.remove(), 2500);
-    }
-  }
+    // Init
+    resize();
+    rebuildLists();
+    pickNew();
 
-  function toast(msg) {
-    const t = document.createElement('div');
-    t.className = 'toast';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => {
-      t.remove();
-    }, 1600);
-  }
-
-  // Long-press screenshot (PNG)
-  let pressTimer = null;
-  skyWrap.addEventListener('pointerdown', () => {
-    pressTimer = setTimeout(() => savePNG(), 700)
-  });
-  window.addEventListener('pointerup', () => {
-    clearTimeout(pressTimer)
-  });
-
-  function savePNG() {
-    // Merge background + overlay into one image
-    const out = document.createElement('canvas');
-    out.width = sky.width;
-    out.height = sky.height;
-    const ict = out.getContext('2d');
-    ict.drawImage(sky, 0, 0);
-    ict.drawImage(overlay, 0, 0);
-    const link = document.createElement('a');
-    link.download = 'sternenraetsel.png';
-    link.href = out.toDataURL('image/png');
-    link.click();
-    toast('Screenshot gespeichert!');
-  }
-
-  // --- Events ----------------------------------------------------------
-  overlay.addEventListener('click', handleClick);
-  btnNew.addEventListener('click', pickNew);
-  btnHints.addEventListener('click', () => {
-    showHints = !showHints;
-    drawProgress();
-  });
-
-  answerForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const ok = checkAnswer(answerInput.value);
-    if (!ok) {
-      toast('Fast! Tipp: deutsch oder lateinisch eingeben.');
-    }
-    answerInput.value = '';
-  });
-
-  // Init
-  resize();
-  rebuildLists();
-  pickNew();
-
-  let lastDPR = getDPR();
-  // subtle animation
-  (function loop() {
-    const nowDPR = getDPR();
-    if (nowDPR !== lastDPR) {
-      lastDPR = nowDPR;
-      resize();
-    }
-    drawBackground();
-    drawStars();
-    drawProgress();
-    requestAnimationFrame(loop);
-  })();
-</script>
+    let lastDPR = getDPR();
+    // subtle animation
+    (function loop() {
+      const nowDPR = getDPR();
+      if (nowDPR !== lastDPR) {
+        lastDPR = nowDPR;
+        resize();
+      }
+      drawBackground();
+      drawStars();
+      drawProgress();
+      requestAnimationFrame(loop);
+    })();
+  </script>
 </body>
 </html>
