@@ -95,7 +95,24 @@
       min-height: 0;
     }
 
+    @media (min-width: 901px) and (pointer: fine) {
+      .panel.card.sidebar {
+        max-height: none;
+        overflow: hidden;
+      }
+      .lists-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow: auto;
+      }
+    }
+
     @media (max-width: 900px), (pointer: coarse) {
+      .panel.card.sidebar {
+        max-height: 68vh;
+        overflow: hidden;
+      }
       .wrap {
         grid-template-columns: minmax(360px, 30%) 1fr;
       }
@@ -114,11 +131,6 @@
       border: 1px solid rgba(255, 255, 255, .08);
       border-radius: 1rem;
       box-shadow: 0 10px 30px rgba(0, 0, 0, .25)
-    }
-
-    .panel.card.sidebar {
-      max-height: 50vh;
-      overflow: hidden;
     }
 
     .muted {
