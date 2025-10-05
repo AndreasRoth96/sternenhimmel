@@ -114,14 +114,28 @@
     @media (max-width: 900px), (pointer: coarse) {
       .wrap {
         grid-template-columns: 1fr;
+        grid-template-rows: 60vh 1fr;
+        height: 100%;
+        min-height: 0;
       }
       .panel.card.sidebar {
-        max-height: 68vh;
+        max-height: 60vh;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .lists-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        padding-right: .25rem;
+        scrollbar-gutter: stable both-edges;
+        -webkit-overflow-scrolling: touch;
       }
       #skyWrap {
-        aspect-ratio: 3/4;
-        min-height: 360px;
+        aspect-ratio: auto;
+        height: 100%;
       }
     }
 
