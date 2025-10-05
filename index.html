@@ -34,6 +34,31 @@
       height: 100dvh;
     }
 
+    .guide summary {
+      list-style: none;
+      cursor: pointer;
+      font-weight: 700;
+      padding: .25rem 0;
+    }
+    .guide summary::-webkit-details-marker {
+      display: none;
+    }
+    .guide[open] summary::after {
+      content: "▲";
+      float: right;
+      opacity: .6;
+    }
+    .guide:not([open]) summary::after {
+      content: "▼";
+      float: right;
+      opacity: .6;
+    }
+    .hr {
+      border: none;
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      margin: .75rem 0;
+    }
+
     header {
       display: flex;
       gap: .75rem;
@@ -121,13 +146,13 @@
       }
       .wrap {
         grid-template-columns: 1fr;
-        grid-template-rows: minmax(0, 58%) 1fr;
+        grid-template-rows: auto 1fr;
         height: 100%;
         min-height: 0;
       }
       .panel.card.sidebar {
         margin: 0 auto;
-        width: 90vw;
+        width: min(92vw, 720px);
         border-radius: 1rem;
         overflow: hidden;
         display: flex;
@@ -144,8 +169,10 @@
       }
       #skyWrap {
         aspect-ratio: auto;
+        min-height: 0;
         height: 100%;
       }
+      #guide[open]{}
     }
 
     .panel {
@@ -313,9 +340,10 @@
 
   <div class="wrap">
     <section class="panel card sidebar" aria-label="Seitenleiste">
-      <h2 style="margin:.25rem 0 .25rem">Anleitung</h2>
+      <details id="guide" class="guide" open>
       <p class="muted small">Finde das Sternbild, indem du die richtigen Sterne der Reihe nach antippst. Gib danach den
         Namen ein (deutsch oder lateinisch). Als Belohnung erhältst du eine Überraschung. 🥳</p>
+      </details>
       <hr style="border:none;border-top:1px solid rgba(255,255,255,.08);margin:.75rem 0"/>
 
 
@@ -586,6 +614,7 @@
     const IS_COARSE = window.matchMedia('(pointer: coarse)').matches;
     const IS_NARROW = window.matchMedia('(max-width: 900px)').matches;
     const IS_MOBILE = IS_COARSE || IS_NARROW;
+    const guideEl = document.getElementById('guide');
     const DEBUG = true;
 
     let showHints = DEBUG;
@@ -595,7 +624,6 @@
     let found = new Set(JSON.parse(localStorage.getItem('found-consts') || '[]'));
     let DPR = getDPR();
     let lastActiveId = localStorage.getItem('debug-active') || null;
-
 
     function saveFound() {
       localStorage.setItem('found-consts', JSON.stringify([...found]));
