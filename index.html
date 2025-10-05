@@ -158,7 +158,7 @@
         display: flex;
         flex-direction: column;
         min-height: 0;
-        max-height: 44dvh;
+        max-height: 40dvh;
       }
       .lists-scroll {
         flex: 1 1 auto;
@@ -623,7 +623,10 @@
     const IS_MOBILE = IS_COARSE || IS_NARROW;
     const guideEl = document.getElementById('guide');
     if(guideEl){
-      guideEl.addEventListener('toggle', resize);
+      guideEl.addEventListener('toggle', () => {
+        sizeSkyForMobile();
+        resize();
+      });
     }
     const DEBUG = false;
 
@@ -881,6 +884,23 @@
       }
     }
 
+    function sizeSkyForMobile() {
+      if(!IS_MOBILE) {
+        skyWrap.style.height = '';
+        return;
+      }
+      const app = document.querySelector('.app');
+      const header = document.querySelector('header');
+      const sidebar = document.querySelector('.panel.card.sidebar');
+      const wrap = document.querySelector('.wrap');
+      const appH = app.getBoundingClientRect().height;
+      const headerH = header.getBoundingClientRect().height;
+      const sidebarH = sidebar.getBoundingClientRect().height;
+      const rowGap = parseFloat(getComputedStyle(wrap).rowGap) || 0;
+      const available = appH - headerH - sidebarH - rowGap;
+
+      skyWrap.style.height = Math.max(220, Math.floor(available)) + 'px';
+    }
     function toast(msg) {
       const t = document.createElement('div');
       t.className = 'toast';
@@ -914,6 +934,13 @@
       link.click();
       toast('Screenshot gespeichert!');
     }*/
+
+    window.addEventListener('resize', () => {
+      sizeSkyForMobile();
+      resize();
+    });
+    sizeSkyForMobile();
+    resize();
 
     // --- Events ----------------------------------------------------------
     overlay.addEventListener('click', handleClick);
