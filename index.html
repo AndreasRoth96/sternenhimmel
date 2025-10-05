@@ -112,6 +112,13 @@
     }
 
     @media (max-width: 900px), (pointer: coarse) {
+      footer {
+        display: none;
+      }
+      html, body, .app {
+        height: 100vh;
+        overflow: hidden;
+      }
       .wrap {
         grid-template-columns: 1fr;
         grid-template-rows: 60vh 1fr;
@@ -119,6 +126,9 @@
         min-height: 0;
       }
       .panel.card.sidebar {
+        margin: 0 auto;
+        width: 90vw;
+        border-radius: 1rem;
         max-height: 60vh;
         overflow: hidden;
         display: flex;
