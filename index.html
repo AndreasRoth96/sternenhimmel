@@ -141,7 +141,7 @@
         display: none;
       }
       html, body, .app {
-        height: 100vh;
+        height: 100dvh;
         overflow: hidden;
       }
       .wrap {
@@ -158,6 +158,7 @@
         display: flex;
         flex-direction: column;
         min-height: 0;
+        max-height: 44dvh;
       }
       .lists-scroll {
         flex: 1 1 auto;
@@ -542,6 +543,8 @@
     const sky = document.getElementById('sky');
     const overlay = document.getElementById('overlay');
     const skyWrap = document.getElementById('skyWrap');
+    const ro = new ResizeObserver(() => resize());
+    ro.observe(skyWrap);
     const ctx = sky.getContext('2d');
     const octx = overlay.getContext('2d');
 
@@ -615,6 +618,9 @@
     const IS_NARROW = window.matchMedia('(max-width: 900px)').matches;
     const IS_MOBILE = IS_COARSE || IS_NARROW;
     const guideEl = document.getElementById('guide');
+    if(guideEl){
+      guideEl.addEventListener('toggle', resize);
+    }
     const DEBUG = true;
 
     let showHints = DEBUG;
