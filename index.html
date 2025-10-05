@@ -121,7 +121,7 @@
       }
       .wrap {
         grid-template-columns: 1fr;
-        grid-template-rows: 60vh 1fr;
+        grid-template-rows: minmax(0, 58%) 1fr;
         height: 100%;
         min-height: 0;
       }
@@ -129,7 +129,6 @@
         margin: 0 auto;
         width: 90vw;
         border-radius: 1rem;
-        max-height: 60vh;
         overflow: hidden;
         display: flex;
         flex-direction: column;
