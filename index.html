@@ -96,6 +96,9 @@
     }
 
     @media (min-width: 901px) and (pointer: fine) {
+      .wrap {
+        grid-template-columns: 380px 1fr;
+      }
       .panel.card.sidebar {
         max-height: none;
         overflow: hidden;
@@ -109,12 +112,12 @@
     }
 
     @media (max-width: 900px), (pointer: coarse) {
+      .wrap {
+        grid-template-columns: 1fr;
+      }
       .panel.card.sidebar {
         max-height: 68vh;
         overflow: hidden;
-      }
-      .wrap {
-        grid-template-columns: minmax(360px, 30%) 1fr;
       }
       #skyWrap {
         aspect-ratio: 3/4;
